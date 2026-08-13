@@ -410,6 +410,13 @@ After the project is generated, run the tests:
 ./mvnw test
 ```
 
+If Maven reports `Operation not permitted` while writing under `target/`, the generated build directory is owned by another user. Fix ownership from the Dev Container terminal, then run the tests again:
+
+```bash
+sudo chown -R "$(id -u):$(id -g)" target
+./mvnw test
+```
+
 Start the application:
 
 ```bash

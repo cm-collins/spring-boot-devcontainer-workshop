@@ -26,10 +26,30 @@ fi
 
 cd "$REPO_ROOT"
 
+remove_path() {
+    local path="$1"
+
+    echo "Removing $path"
+
+    if rm -rf "$path" 2>/dev/null; then
+        return
+    fi
+
+    if command -v sudo >/dev/null 2>&1; then
+        echo "Standard removal failed. Retrying with sudo because $path may be owned by another container user."
+        sudo rm -rf "$path"
+        return
+    fi
+
+    echo "ERROR: Could not remove $path."
+    echo "It may be owned by another user. Fix ownership, then run this script again:"
+    echo "sudo chown -R \"\$(id -u):\$(id -g)\" $path"
+    exit 1
+}
+
 for path in pom.xml Dockerfile .dockerignore mvnw mvnw.cmd .mvn src target HELP.md; do
     if [ -e "$path" ]; then
-        echo "Removing $path"
-        rm -rf "$path"
+        remove_path "$path"
     fi
 done
 
