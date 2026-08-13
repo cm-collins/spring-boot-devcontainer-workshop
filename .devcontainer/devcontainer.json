@@ -1,0 +1,49 @@
+{
+    "name": "Spring Boot Dev Container Workshop",
+    "build": {
+        "dockerfile": "Dockerfile.dev",
+        "context": ".."
+    },
+    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+    "remoteUser": "vscode",
+    "forwardPorts": [
+        8080,
+        5432
+    ],
+    "portsAttributes": {
+        "8080": {
+            "label": "Spring Boot",
+            "onAutoForward": "notify"
+        },
+        "5432": {
+            "label": "PostgreSQL",
+            "onAutoForward": "silent"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "vscjava.vscode-java-pack",
+                "vmware.vscode-spring-boot",
+                "vscjava.vscode-spring-initializr",
+                "vscjava.vscode-gradle",
+                "redhat.vscode-yaml",
+                "ms-azuretools.vscode-docker"
+            ],
+            "settings": {
+                "java.configuration.updateBuildConfiguration": "automatic",
+                "java.compile.nullAnalysis.mode": "automatic",
+                "java.configuration.runtimes": [
+                    {
+                        "name": "JavaSE-21",
+                        "path": "/usr/lib/jvm/msopenjdk-current",
+                        "default": true
+                    }
+                ],
+                "terminal.integrated.defaultProfile.linux": "bash"
+            }
+        }
+    },
+    "postCreateCommand": "bash .devcontainer/scripts/post-create.sh",
+    "postStartCommand": "bash .devcontainer/scripts/post-start.sh"
+}
