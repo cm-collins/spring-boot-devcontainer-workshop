@@ -1,0 +1,133 @@
+# syntax=docker/dockerfile:1
+
+FROM mcr.microsoft.com/devcontainers/java:21-bookworm
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Versions are deliberately pinned for reproducibility.
+ARG MAVEN_VERSION=3.9.11
+ARG GRADLE_VERSION=9.1.0
+
+USER root
+
+# -----------------------------------------------------------------------------
+# Core development utilities
+# -----------------------------------------------------------------------------
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    bash \
+    ca-certificates \
+    curl \
+    wget \
+    unzip \
+    zip \
+    jq \
+    less \
+    procps \
+    file \
+    tree \
+    openssh-client \
+    gnupg \
+    lsb-release \
+    python3 \
+    python3-pip \
+    python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+
+# -----------------------------------------------------------------------------
+# Maven
+# -----------------------------------------------------------------------------
+RUN curl -fsSL \
+    "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" \
+    -o /tmp/maven.tar.gz \
+    && tar -xzf /tmp/maven.tar.gz -C /opt \
+    && ln -s "/opt/apache-maven-${MAVEN_VERSION}" /opt/maven \
+    && ln -s /opt/maven/bin/mvn /usr/local/bin/mvn \
+    && rm /tmp/maven.tar.gz
+
+ENV MAVEN_HOME=/opt/maven
+
+# -----------------------------------------------------------------------------
+# Gradle
+# -----------------------------------------------------------------------------
+RUN curl -fsSL \
+    "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
+    -o /tmp/gradle.zip \
+    && unzip -q /tmp/gradle.zip -d /opt \
+    && ln -s "/opt/gradle-${GRADLE_VERSION}" /opt/gradle \
+    && ln -s /opt/gradle/bin/gradle /usr/local/bin/gradle \
+    && rm /tmp/gradle.zip
+
+ENV GRADLE_HOME=/opt/gradle
+
+# -----------------------------------------------------------------------------
+# GitHub CLI
+# -----------------------------------------------------------------------------
+RUN curl -fsSL \
+    https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+    -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+    > /etc/apt/sources.list.d/github-cli.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends gh \
+    && rm -rf /var/lib/apt/lists/*
+
+# -----------------------------------------------------------------------------
+# Azure CLI
+# -----------------------------------------------------------------------------
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
+# -----------------------------------------------------------------------------
+# Docker CLI + Buildx + Compose
+#
+# The Docker daemon remains on the host.
+# The Dev Container contains the client-side tooling.
+# -----------------------------------------------------------------------------
+RUN install -m 0755 -d /etc/apt/keyrings \
+    && curl -fsSL \
+    https://download.docker.com/linux/debian/gpg \
+    -o /etc/apt/keyrings/docker.asc \
+    && chmod a+r /etc/apt/keyrings/docker.asc \
+    && echo \
+    "Types: deb\n\
+    URIs: https://download.docker.com/linux/debian\n\
+    Suites: bookworm\n\
+    Components: stable\n\
+    Architectures: $(dpkg --print-architecture)\n\
+    Signed-By: /etc/apt/keyrings/docker.asc" \
+    > /etc/apt/sources.list.d/docker.sources \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+    docker-ce-cli \
+    docker-buildx-plugin \
+    docker-compose-plugin \
+    && rm -rf /var/lib/apt/lists/*
+
+# -----------------------------------------------------------------------------
+# Java / shell defaults
+# -----------------------------------------------------------------------------
+ENV JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8"
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
+# -----------------------------------------------------------------------------
+# Verify the important installations during image build.
+# If one of these fails, the image build fails early.
+# -----------------------------------------------------------------------------
+RUN java --version \
+    && javac --version \
+    && mvn --version \
+    && gradle --version \
+    && git --version \
+    && gh --version \
+    && az version \
+    && python3 --version \
+    && pip3 --version \
+    && docker --version \
+    && docker compose version
+
+# -----------------------------------------------------------------------------
+# Return to the standard Dev Container user.
+# -----------------------------------------------------------------------------
+USER vscode
