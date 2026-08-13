@@ -127,6 +127,23 @@ RUN java --version \
     && docker compose version
 
 # -----------------------------------------------------------------------------
+# Docker socket permissions
+#
+# Linux hosts commonly expose /var/run/docker.sock with group id 999,
+# while some rootless/containerized setups expose it as 65534.
+# Adding the vscode user to both matching groups avoids relying on
+# Docker-specific run args such as --group-add=keep-groups.
+# -----------------------------------------------------------------------------
+RUN for gid in 999 65534; do \
+    DOCKER_SOCKET_GROUP="$(getent group "$gid" | cut -d: -f1 || true)"; \
+    if [ -z "$DOCKER_SOCKET_GROUP" ]; then \
+    DOCKER_SOCKET_GROUP="docker-host-$gid"; \
+    groupadd --gid "$gid" "$DOCKER_SOCKET_GROUP"; \
+    fi; \
+    usermod -aG "$DOCKER_SOCKET_GROUP" vscode; \
+    done
+
+# -----------------------------------------------------------------------------
 # Return to the standard Dev Container user.
 # -----------------------------------------------------------------------------
 USER vscode
