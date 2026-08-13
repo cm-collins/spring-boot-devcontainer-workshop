@@ -10,6 +10,8 @@ if [ "${1:-}" != "--yes" ]; then
     echo
     echo "Files/directories removed:"
     echo "- pom.xml"
+    echo "- Dockerfile"
+    echo "- .dockerignore"
     echo "- mvnw"
     echo "- mvnw.cmd"
     echo "- .mvn/"
@@ -24,7 +26,7 @@ fi
 
 cd "$REPO_ROOT"
 
-for path in pom.xml mvnw mvnw.cmd .mvn src target HELP.md; do
+for path in pom.xml Dockerfile .dockerignore mvnw mvnw.cmd .mvn src target HELP.md; do
     if [ -e "$path" ]; then
         echo "Removing $path"
         rm -rf "$path"

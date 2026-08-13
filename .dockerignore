@@ -1,0 +1,10 @@
+.git
+.devcontainer
+.idea
+.vscode
+target
+build
+dist
+*.iml
+*.log
+HELP.md

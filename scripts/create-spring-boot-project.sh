@@ -62,6 +62,53 @@ fi
 
 chmod +x "$REPO_ROOT/mvnw"
 
+cat > "$REPO_ROOT/Dockerfile" <<'DOCKERFILE'
+# syntax=docker/dockerfile:1
+
+FROM maven:3.9.11-eclipse-temurin-21 AS build
+
+WORKDIR /workspace
+
+COPY .mvn .mvn
+COPY mvnw mvnw
+COPY pom.xml pom.xml
+
+COPY src src
+
+RUN ./mvnw -q -DskipTests package
+
+
+FROM eclipse-temurin:21-jre
+
+WORKDIR /app
+
+RUN groupadd --system spring \
+    && useradd --system --gid spring spring
+
+COPY --from=build /workspace/target/*.jar app.jar
+
+ENV SERVER_PORT=8080
+
+EXPOSE 8080
+
+USER spring
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
+DOCKERFILE
+
+cat > "$REPO_ROOT/.dockerignore" <<'DOCKERIGNORE'
+.git
+.devcontainer
+.idea
+.vscode
+target
+build
+dist
+*.iml
+*.log
+HELP.md
+DOCKERIGNORE
+
 package_path="${PACKAGE_NAME//.//}"
 main_source_dir="$REPO_ROOT/src/main/java/$package_path"
 resources_dir="$REPO_ROOT/src/main/resources"
@@ -414,6 +461,8 @@ echo
 echo "Generated:"
 echo "- pom.xml"
 echo "- Maven wrapper"
+echo "- Dockerfile"
+echo "- .dockerignore"
 echo "- src/main/java/$package_path/controller"
 echo "- src/main/java/$package_path/service"
 echo "- src/main/java/$package_path/repository"

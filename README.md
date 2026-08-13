@@ -84,6 +84,7 @@ flowchart TB
 | Component | Responsibility |
 | --- | --- |
 | `.devcontainer/Dockerfile.dev` | Defines the developer workstation image and installed tools. |
+| `Dockerfile` | Defines the production application image. |
 | `.devcontainer/compose.yaml` | Defines local services used during development, currently PostgreSQL. |
 | `.devcontainer/devcontainer.json` | Tells VS Code or Dev Containers how to build and enter the workspace. |
 | `.devcontainer/scripts/` | Contains lifecycle and verification scripts used by the container. |
@@ -108,6 +109,8 @@ spring-boot-devcontainer-workshop/
 |
 +-- README.md
 +-- LICENSE
++-- Dockerfile
++-- .dockerignore
 +-- pom.xml
 +-- mvnw
 +-- mvnw.cmd
@@ -630,6 +633,8 @@ The next time PostgreSQL starts, Docker will initialize a fresh database.
 
 The development image can also be built independently from VS Code.
 
+The development image is for the developer workstation. It includes tools such as Maven, Gradle, GitHub CLI, Azure CLI, Python, Docker CLI, and Docker Compose.
+
 From the repository root:
 
 ```bash
@@ -672,6 +677,69 @@ docker compose version
 ```
 
 This verifies that the image contains the expected tooling.
+
+## Production Docker Image
+
+The root-level `Dockerfile` is different from `.devcontainer/Dockerfile.dev`.
+
+| File | Purpose | Contains |
+| --- | --- | --- |
+| `.devcontainer/Dockerfile.dev` | Developer environment | Java, Maven, Gradle, Git, CLIs, Docker tooling, shell utilities |
+| `Dockerfile` | Production application image | Built Spring Boot jar and Java runtime |
+
+The production image uses a multi-stage build:
+
+```mermaid
+flowchart LR
+    SOURCE[Source Code]
+    BUILDER[Maven + JDK Builder Stage]
+    JAR[Spring Boot Jar]
+    RUNTIME[Java Runtime Image]
+    APP[Running Application]
+
+    SOURCE --> BUILDER
+    BUILDER --> JAR
+    JAR --> RUNTIME
+    RUNTIME --> APP
+```
+
+Build the production image:
+
+```bash
+docker build \
+  -t workshop-app:prod \
+  .
+```
+
+Run it on the same Docker network as PostgreSQL:
+
+```bash
+docker run --rm \
+  --name workshop-app \
+  --network spring-dev-network \
+  -p 8080:8080 \
+  -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/spring_boot_dev \
+  -e SPRING_DATASOURCE_USERNAME=spring_boot \
+  -e SPRING_DATASOURCE_PASSWORD=spring_boot_dev_password \
+  workshop-app:prod
+```
+
+Test the production container:
+
+```bash
+curl http://localhost:8080/api/hello
+curl http://localhost:8080/api/customers
+curl http://localhost:8080/actuator/health
+```
+
+Stop it with `Ctrl+C`.
+
+The key difference:
+
+```text
+Development image: used by people while writing code.
+Production image: used to run the built application.
+```
 
 ## Current Verified Environment
 
