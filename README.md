@@ -29,12 +29,12 @@ After working through this repository, you should understand how to:
 
 ## Current Repository Status
 
-This repository currently contains the **development environment foundation**. It does not yet contain a generated Spring Boot application.
+This repository contains the **development environment foundation** and a manual setup script for generating a Spring Boot application.
 
 The repository is designed to build up in stages:
 
 1. Understand the development environment.
-2. Add or generate a Spring Boot application.
+2. Generate a Spring Boot application with the setup script.
 3. Connect the application to the local PostgreSQL service.
 
 ## Architecture Overview
@@ -87,6 +87,7 @@ flowchart TB
 | `.devcontainer/compose.yaml` | Defines local services used during development, currently PostgreSQL. |
 | `.devcontainer/devcontainer.json` | Tells VS Code or Dev Containers how to build and enter the workspace. |
 | `.devcontainer/scripts/` | Contains lifecycle and verification scripts used by the container. |
+| `scripts/create-spring-boot-project.sh` | Manually generates a Spring Boot project when learners are ready to add application code. |
 
 ## Project Structure
 
@@ -107,6 +108,27 @@ spring-boot-devcontainer-workshop/
 |
 +-- README.md
 +-- LICENSE
++-- pom.xml
++-- mvnw
++-- mvnw.cmd
++-- scripts/
+|   +-- create-spring-boot-project.sh
+|   +-- reset-generated-spring-boot-project.sh
+|   +-- run-spring-boot-app.sh
++-- src/
+    +-- main/
+    |   +-- java/com/example/workshop/
+    |   |   +-- WorkshopAppApplication.java
+    |   |   +-- controller/
+    |   |   +-- service/
+    |   |   +-- repository/
+    |   |   +-- domain/
+    |   |   +-- dto/
+    |   +-- resources/
+    |       +-- application.properties
+    +-- test/
+        +-- java/com/example/workshop/
+        +-- resources/application-test.properties
 ```
 
 ## File Responsibilities
@@ -300,6 +322,150 @@ bash .devcontainer/scripts/verify-environment.sh
 ```
 
 This checks Java, Maven, Gradle, Git, GitHub CLI, Azure CLI, Python, Docker, and Docker Compose.
+
+### 4. Generate the Spring Boot Application
+
+The repository starts as a Dev Container workshop foundation. Generate the Spring Boot application manually when ready:
+
+```bash
+bash scripts/create-spring-boot-project.sh
+```
+
+The script creates:
+
+1. `pom.xml`
+2. Maven wrapper files
+3. A layered `src/main/java/...` package structure
+4. `src/main/resources/application.properties`
+5. A sample `/api/hello` endpoint
+6. A small `Customer` API backed by Spring Data JPA
+7. A `test` profile using H2
+8. A focused `CustomerServiceTest`
+
+The generated application follows a layered Spring Boot structure commonly used in professional Java backend teams:
+
+```text
+src/main/java/com/example/workshop/
+|
++-- WorkshopAppApplication.java
+|
++-- controller/
+|   +-- WelcomeController.java
+|   +-- CustomerController.java
+|
++-- service/
+|   +-- CustomerService.java
+|
++-- repository/
+|   +-- CustomerRepository.java
+|
++-- domain/
+|   +-- Customer.java
+|
++-- dto/
+    +-- CreateCustomerRequest.java
+    +-- CustomerResponse.java
+```
+
+The request flow looks like this:
+
+```mermaid
+flowchart LR
+    CLIENT[HTTP Client]
+    CONTROLLER[Controller]
+    SERVICE[Service]
+    REPOSITORY[Repository]
+    ENTITY[Domain Entity]
+    DB[(PostgreSQL)]
+    DTO[DTO Response]
+
+    CLIENT --> CONTROLLER
+    CONTROLLER --> SERVICE
+    SERVICE --> REPOSITORY
+    REPOSITORY --> ENTITY
+    ENTITY --> DB
+    DB --> ENTITY
+    ENTITY --> SERVICE
+    SERVICE --> DTO
+    DTO --> CONTROLLER
+    CONTROLLER --> CLIENT
+```
+
+Each layer has a specific job:
+
+| Layer | Responsibility |
+| --- | --- |
+| `controller` | Receives HTTP requests and returns HTTP responses. |
+| `service` | Holds business logic and transaction boundaries. |
+| `repository` | Handles database access through Spring Data JPA. |
+| `domain` | Represents persistent business objects. |
+| `dto` | Defines request and response shapes for the API. |
+
+After the project is generated, run the tests:
+
+```bash
+./mvnw test
+```
+
+Start the application:
+
+```bash
+bash scripts/run-spring-boot-app.sh
+```
+
+The run script starts PostgreSQL first, then runs:
+
+```bash
+./mvnw spring-boot:run
+```
+
+Then test it:
+
+```bash
+curl http://localhost:8080/api/hello
+curl http://localhost:8080/api/customers
+curl http://localhost:8080/actuator/health
+```
+
+Create a customer:
+
+```bash
+curl -X POST http://localhost:8080/api/customers \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Ada Lovelace","email":"ada@example.com"}'
+```
+
+List customers again:
+
+```bash
+curl http://localhost:8080/api/customers
+```
+
+Get one customer by id:
+
+```bash
+curl http://localhost:8080/api/customers/1
+```
+
+Try validation:
+
+```bash
+curl -X POST http://localhost:8080/api/customers \
+  -H "Content-Type: application/json" \
+  -d '{"name":"","email":"not-an-email"}'
+```
+
+Stop the running application with `Ctrl+C`.
+
+### Reset the Generated Application
+
+If a generated Spring Boot application already exists and the repository needs to return to the pre-generation workshop state, run:
+
+```bash
+bash scripts/reset-generated-spring-boot-project.sh --yes
+```
+
+This removes generated application files such as `pom.xml`, `mvnw`, `.mvn/`, `src/`, and `target/`. It does not remove `.devcontainer/`, `scripts/`, `README.md`, or `LICENSE`.
 
 ## Working with PostgreSQL
 
@@ -575,8 +741,8 @@ Work through the repository in this order:
 3. Run `verify-environment.sh` to inspect the installed tools.
 4. Start PostgreSQL with Docker Compose.
 5. Inspect the database using `psql`.
-6. Generate or add a Spring Boot application.
-7. Configure Spring Boot to connect to PostgreSQL.
+6. Run `scripts/create-spring-boot-project.sh` to generate the Spring Boot application.
+7. Review the generated PostgreSQL configuration.
 8. Run the application inside the Dev Container.
 9. Run tests against local infrastructure.
 
