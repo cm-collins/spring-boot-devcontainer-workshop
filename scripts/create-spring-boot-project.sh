@@ -56,6 +56,8 @@ cp -a "$generated_dir/mvnw.cmd" "$REPO_ROOT/"
 cp -a "$generated_dir/pom.xml" "$REPO_ROOT/"
 cp -a "$generated_dir/src" "$REPO_ROOT/"
 
+sed -i "s/<java.version>.*<\/java.version>/<java.version>$JAVA_VERSION<\/java.version>/" "$REPO_ROOT/pom.xml"
+
 if [ -f "$generated_dir/.gitignore" ] && [ ! -f "$REPO_ROOT/.gitignore" ]; then
     cp -a "$generated_dir/.gitignore" "$REPO_ROOT/"
 fi
