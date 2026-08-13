@@ -1,432 +1,477 @@
 # Spring Boot Dev Container Workshop
 
-A hands-on Spring Boot development environment demonstrating **reproducible Java development with Dev Containers, Docker Compose, and local development infrastructure**.
+A hands-on guide for building Java and Spring Boot applications inside **Dev Containers** with Docker Compose and local development infrastructure.
 
-The goal of this workshop is to solve a very common problem:
+This project focuses on a common problem:
 
 > "Just clone the project and run it."
 
-Only to discover that the project requires a specific JDK, Maven version, Gradle version, database, CLI tools, environment variables, and several hours of setup.
+In real projects, that usually means installing the correct JDK, Maven or Gradle version, Docker, database tools, CLI tools, environment variables, and local services before writing any code.
 
-Instead, we want the development environment to be part of the project.
-
----
-
-## 🎯 Workshop Goal
-
-By the end of this workshop, a developer should be able to:
-
-1. Clone the repository.
-2. Open the project inside a Dev Container.
-3. Have Java and the required development tools available automatically.
-4. Have a local PostgreSQL database available.
-5. Build and run a Spring Boot application.
-6. Connect Spring Boot to PostgreSQL.
-7. Run tests without depending on a remote development database.
-8. Reproduce the same development environment on different machines.
-
-The target experience is:
+This repository takes a different approach: the development environment lives inside the project.
 
 ```text
-Clone → Open in Dev Container → Start Developing
+Clone -> Open in Dev Container -> Start Developing
+```
 
-🏗️ Architecture
+## Learning Goals
 
-The project intentionally separates three concerns:
+After working through this repository, you should understand how to:
+
+1. Clone a Java project and open it in a Dev Container.
+2. Use a reproducible Java 21 development environment.
+3. Work with Maven and Gradle inside the container.
+4. Run local infrastructure with Docker Compose.
+5. Start and inspect a local PostgreSQL database.
+6. Connect a Spring Boot application to PostgreSQL.
+7. Run builds and tests without relying on a shared remote database.
+8. Explain how `Dockerfile.dev`, `compose.yaml`, and `devcontainer.json` work together.
+
+## Current Repository Status
+
+This repository currently contains the **development environment foundation**. It does not yet contain a generated Spring Boot application.
+
+The repository is designed to build up in stages:
+
+1. Understand the development environment.
+2. Add or generate a Spring Boot application.
+3. Connect the application to the local PostgreSQL service.
+
+## Architecture Overview
+
+The project separates three concerns:
+
+```mermaid
 flowchart TB
     DEV[Developer]
+    REPO[Project Repository]
 
-    DEV --> REPO[Spring Boot Repository]
+    ENV[Development Environment]
+    INFRA[Local Infrastructure]
+    WORKSPACE[Dev Container Workspace]
 
-    REPO --> ENV[Development Environment]
-    REPO --> INFRA[Local Infrastructure]
-    REPO --> WORKSPACE[Dev Container Workspace]
+    DOCKERFILE[Dockerfile.dev]
+    COMPOSE[compose.yaml]
+    DEVCONTAINER[devcontainer.json]
 
-    ENV --> DOCKERFILE[Dockerfile.dev]
+    JAVA[Java 21]
+    MAVEN[Maven]
+    GRADLE[Gradle]
+    TOOLS[Git, GitHub CLI, Azure CLI, Python]
+    DOCKER[Docker CLI and Compose]
+    POSTGRES[(PostgreSQL 18)]
 
-    DOCKERFILE --> JAVA[Java 21]
-    DOCKERFILE --> MAVEN[Maven]
-    DOCKERFILE --> GRADLE[Gradle]
-    DOCKERFILE --> GIT[Git]
-    DOCKERFILE --> GH[GitHub CLI]
-    DOCKERFILE --> AZ[Azure CLI]
-    DOCKERFILE --> PYTHON[Python]
-    DOCKERFILE --> DOCKER[Docker CLI + Compose]
+    DEV --> REPO
+    REPO --> ENV
+    REPO --> INFRA
+    REPO --> WORKSPACE
 
-    INFRA --> COMPOSE[compose.yaml]
-    COMPOSE --> POSTGRES[(PostgreSQL 18)]
+    ENV --> DOCKERFILE
+    DOCKERFILE --> JAVA
+    DOCKERFILE --> MAVEN
+    DOCKERFILE --> GRADLE
+    DOCKERFILE --> TOOLS
+    DOCKERFILE --> DOCKER
 
-    WORKSPACE --> DEVCONTAINER[devcontainer.json]
+    INFRA --> COMPOSE
+    COMPOSE --> POSTGRES
 
+    WORKSPACE --> DEVCONTAINER
     DEVCONTAINER --> ENV
     DEVCONTAINER --> INFRA
+```
 
-    The three main responsibilities are:
+| Component | Responsibility |
+| --- | --- |
+| `.devcontainer/Dockerfile.dev` | Defines the developer workstation image and installed tools. |
+| `.devcontainer/compose.yaml` | Defines local services used during development, currently PostgreSQL. |
+| `.devcontainer/devcontainer.json` | Tells VS Code or Dev Containers how to build and enter the workspace. |
+| `.devcontainer/scripts/` | Contains lifecycle and verification scripts used by the container. |
 
-Component	Responsibility
-Dockerfile.dev	Defines the development environment
-compose.yaml	Defines local infrastructure
-devcontainer.json	Connects the developer workspace to the environment and infrastructure
+## Project Structure
 
-This separation is intentional.
-📁 Project Structure
+```text
 spring-boot-devcontainer-workshop/
-│
-├── .devcontainer/
-│   │
-│   ├── Dockerfile.dev
-│   │
-│   ├── compose.yaml
-│   │
-│   ├── devcontainer.json
-│   │
-│   └── scripts/
-│       ├── post-create.sh
-│       ├── post-start.sh
-│       └── verify.sh
-│
-├── README.md
-│
-└── ...
-File responsibilities
-Dockerfile.dev
+|
++-- .devcontainer/
+|   |
+|   +-- Dockerfile.dev
+|   +-- compose.yaml
+|   +-- devcontainer.json
+|   |
+|   +-- scripts/
+|       +-- post-create.sh
+|       +-- post-start.sh
+|       +-- verify.sh
+|
++-- README.md
++-- LICENSE
+```
 
-Defines the developer workstation.
+## File Responsibilities
 
-It contains:
+### `.devcontainer/Dockerfile.dev`
 
-Java 21
-Maven
-Gradle
-Git
-GitHub CLI
-Azure CLI
-Python
-Docker CLI
-Docker Compose
-Linux development utilities
-compose.yaml
+Defines the development image used by the Dev Container.
 
-Defines services required for local development.
+It installs and verifies:
 
-Currently:
+| Tool | Purpose |
+| --- | --- |
+| Java 21 | Java and Spring Boot development |
+| Maven 3.9.11 | Java build automation |
+| Gradle 9.1.0 | Java build automation |
+| Git | Source control |
+| GitHub CLI | GitHub operations |
+| Azure CLI | Azure development and deployment |
+| Python 3 | Scripting and automation |
+| Docker CLI | Container management |
+| Docker Buildx | Image building |
+| Docker Compose | Local infrastructure orchestration |
+| Bash, curl, jq, zip, unzip | Common development utilities |
 
-PostgreSQL 18
+The image is based on:
 
-The database is intentionally kept separate from the development container.
-devcontainer.json
-
-Defines how VS Code / Dev Containers creates and configures the development workspace.
-
-This will eventually connect:
-
-Developer
-    │
-    ▼
-Dev Container
-    │
-    └──── PostgreSQL
-    scripts/
-
-Contains lifecycle and verification scripts.
-
-scripts/
-├── post-create.sh
-├── post-start.sh
-└── verify.sh
-
-These scripts will be introduced as the Dev Container setup progresses.
-🐳 Development Environment
-
-The development image is built from:
-
+```text
 mcr.microsoft.com/devcontainers/java:21-bookworm
+```
 
-The image provides Java 21 and the base development environment.
+### `.devcontainer/compose.yaml`
 
-Additional tools are installed in Dockerfile.dev.
+Defines local infrastructure for the project.
 
-Available Tools
-Tool	Purpose
-Java 21	Java/Spring Boot development
-Maven 3.9.11	Java build automation
-Gradle 9.1.0	Java build automation
-Git	Source control
-GitHub CLI	GitHub operations
-Azure CLI	Azure development/deployment
-Python 3	Scripting and automation
-Docker CLI	Container management
-Docker Buildx	Image building
-Docker Compose	Local infrastructure
-Bash	Shell environment
-curl	HTTP/download utilities
-jq	JSON processing
-unzip/zip	Archive management
-🐘 Local PostgreSQL
+Currently, it provides:
 
-The project uses PostgreSQL 18 as the local development database.
+| Service | Version | Purpose |
+| --- | --- | --- |
+| PostgreSQL | 18 | Local application database |
 
-We deliberately use Docker Compose instead of asking every developer to install PostgreSQL directly on their machine.
+The PostgreSQL service is intentionally separate from the development container. That mirrors a real application setup where the app and database run as separate services.
+
+### `.devcontainer/devcontainer.json`
+
+Defines how the workspace is opened inside VS Code or another Dev Containers compatible tool.
+
+It configures:
+
+| Setting | Purpose |
+| --- | --- |
+| `build.dockerfile` | Builds the Dev Container from `Dockerfile.dev`. |
+| `workspaceFolder` | Opens the project under `/workspaces/...`. |
+| `remoteUser` | Uses the standard `vscode` container user. |
+| `mounts` | Mounts the host Docker socket for Docker CLI access. |
+| `forwardPorts` | Forwards Spring Boot and PostgreSQL ports. |
+| `customizations.vscode.extensions` | Installs Java, Spring Boot, Gradle, YAML, and Docker extensions. |
+| `postCreateCommand` | Runs setup after the container is created. |
+| `postStartCommand` | Runs a short status script when the container starts. |
+
+### `.devcontainer/scripts/`
+
+| Script | Purpose |
+| --- | --- |
+| `post-create.sh` | Starts PostgreSQL with Docker Compose and waits until it is ready. |
+| `post-start.sh` | Prints basic container, Java, and workspace information. |
+| `verify.sh` | Verifies that required tools are installed and prints their versions. |
+
+## Development Environment Flow
+
+```mermaid
+sequenceDiagram
+    actor Developer
+    participant Repository
+    participant DevContainer as Dev Container
+    participant Docker as Host Docker Engine
+    participant PostgreSQL
+
+    Developer->>Repository: Clone repository
+    Developer->>DevContainer: Open in Dev Container
+    DevContainer->>DevContainer: Build Java development image
+    DevContainer->>Docker: Use mounted Docker socket
+    Docker->>PostgreSQL: Start PostgreSQL via Docker Compose
+    PostgreSQL-->>Docker: Healthy
+    Docker-->>DevContainer: Service ready
+    Developer->>DevContainer: Build and run Java application
+    DevContainer->>PostgreSQL: Connect to database
+```
+
+## Local PostgreSQL
+
+The project uses PostgreSQL as the local database.
+
+```mermaid
 flowchart LR
     DEV[Developer Machine]
-
-    DEV --> COMPOSE[Docker Compose]
-
-    COMPOSE --> NETWORK[Spring Development Network]
-
-    NETWORK --> POSTGRES[(PostgreSQL 18)]
-
-    POSTGRES --> DB[(spring_boot_dev)]
-    This gives every developer the same database technology and configuration.
-
-🗄️ Database Configuration
-
-The current local PostgreSQL configuration is:
-
-Setting	Value
-Database	spring_boot_dev
-Username	spring_boot
-Password	spring_boot_dev_password
-Port	5432
-PostgreSQL Version	18
-
-From the host machine:
-
-localhost:5432
-
-From another container on the Compose network:
-
-postgres:5432
-
-Important: Container-to-container communication uses the Compose service name postgres, not localhost.
-🔌 Container Networking
-
-The database is attached to:
-
-spring-dev-network
-
-The intended architecture is:
-flowchart LR
-    DEV[Spring Boot Dev Container]
-
+    DOCKER[Docker Engine]
+    COMPOSE[Docker Compose]
     NETWORK{{spring-dev-network}}
+    POSTGRES[(PostgreSQL 18)]
+    DB[(spring_boot_dev)]
+    VOLUME[(postgres-data)]
 
-    DB[(PostgreSQL 18)]
+    DEV --> DOCKER
+    DOCKER --> COMPOSE
+    COMPOSE --> NETWORK
+    NETWORK --> POSTGRES
+    POSTGRES --> DB
+    POSTGRES --> VOLUME
+```
 
-    DEV --> NETWORK
-    NETWORK --> DB
+### Database Configuration
 
-    DEV -. "postgres:5432" .-> DB
+| Setting | Value |
+| --- | --- |
+| Database | `spring_boot_dev` |
+| Username | `spring_boot` |
+| Password | `spring_boot_dev_password` |
+| Host port | `5432` |
+| PostgreSQL version | `18` |
+| Docker network | `spring-dev-network` |
+| Docker volume | `postgres-data` |
 
-    Inside the Dev Container, Spring Boot will eventually connect using:
+From the host machine, connect through:
 
-postgres:5432
-
-Not:
-
+```text
 localhost:5432
+```
 
-Why?
+From another container on the same Docker network, connect through:
 
-Inside a container:
+```text
+postgres:5432
+```
 
-localhost
+Important: inside a container, `localhost` means "this same container." It does not mean "the PostgreSQL container." Container-to-container communication should use the Compose service name, which is `postgres`.
 
-means:
+## Container Networking
 
-"This container."
+The intended service-to-service model is:
 
-It does not mean:
+```mermaid
+flowchart LR
+    APP[Spring Boot Dev Container]
+    NETWORK{{spring-dev-network}}
+    DB[(PostgreSQL Container)]
 
-"The PostgreSQL container."
+    APP --> NETWORK
+    NETWORK --> DB
+    APP -. "postgres:5432" .-> DB
+```
 
-Docker Compose provides DNS-based service discovery, allowing containers on the same network to reach services using their service name.
-🚀 Getting Started
-1. Clone the repository
+Note: the current Dev Container starts PostgreSQL by using the mounted host Docker socket. If you want the Dev Container itself to resolve `postgres` directly, make sure the Dev Container is attached to the same Docker network as PostgreSQL, or convert the setup to a Compose-based Dev Container.
+
+## Getting Started
+
+### Prerequisites
+
+Before opening the Dev Container, install:
+
+1. Docker Desktop, Docker Engine, or a compatible container runtime.
+2. VS Code.
+3. The Dev Containers extension for VS Code.
+4. Git.
+
+### 1. Clone the Repository
+
+```bash
 git clone <repository-url>
 cd spring-boot-devcontainer-workshop
-2. Validate the Docker Compose Configuration
+```
 
-Before starting PostgreSQL:
+### 2. Open in a Dev Container
 
+In VS Code:
+
+1. Open the repository folder.
+2. Open the Command Palette.
+3. Run `Dev Containers: Reopen in Container`.
+
+VS Code will build the development image from `.devcontainer/Dockerfile.dev`.
+
+### 3. Verify the Environment
+
+Inside the Dev Container terminal, run:
+
+```bash
+bash .devcontainer/scripts/verify.sh
+```
+
+This checks Java, Maven, Gradle, Git, GitHub CLI, Azure CLI, Python, Docker, and Docker Compose.
+
+## Working with PostgreSQL
+
+### Validate the Compose File
+
+```bash
 docker compose \
   -f .devcontainer/compose.yaml \
   config
+```
 
-This validates the Compose configuration without starting any containers.
+This validates the Docker Compose configuration without starting containers.
 
-3. Start PostgreSQL
+### Start PostgreSQL
+
+```bash
 docker compose \
   -f .devcontainer/compose.yaml \
   up -d
+```
 
 Docker will create:
 
-PostgreSQL container
-PostgreSQL network
-PostgreSQL persistent volume
-4. Check PostgreSQL
+1. A PostgreSQL container.
+2. A Docker network.
+3. A persistent Docker volume.
+
+### Check the Container
+
+```bash
 docker compose \
   -f .devcontainer/compose.yaml \
   ps
+```
 
-You should eventually see PostgreSQL as:
+You should eventually see PostgreSQL reported as healthy:
 
+```text
 Up ... (healthy)
+```
 
-The first startup may initially report:
+The first startup may briefly show:
 
+```text
 health: starting
+```
 
 Wait a few seconds and check again.
 
-5. Check PostgreSQL Readiness
+### Check PostgreSQL Readiness
 
-Run:
-
+```bash
 docker compose \
   -f .devcontainer/compose.yaml \
   exec postgres \
   pg_isready \
   -U spring_boot \
   -d spring_boot_dev
+```
 
-Expected:
+Expected output:
 
+```text
 /var/run/postgresql:5432 - accepting connections
-6. Connect to PostgreSQL
+```
 
-Open a PostgreSQL shell:
+### Open a PostgreSQL Shell
 
+```bash
 docker compose \
   -f .devcontainer/compose.yaml \
   exec postgres \
   psql \
   -U spring_boot \
   -d spring_boot_dev
+```
 
-You should see:
+Expected prompt:
 
-Type "help" for help.
-
+```text
 spring_boot_dev=#
-7. Verify the Database
+```
 
-Inside PostgreSQL:
+Useful commands inside `psql`:
 
+```sql
 SELECT current_database();
+```
 
-Expected:
-
- current_database
-------------------
- spring_boot_dev
-
-Check the connection:
-
+```text
 \conninfo
-
-List databases:
-
 \l
-
-List tables:
-
 \dt
-
-Exit PostgreSQL:
-
 \q
+```
 
-💾 PostgreSQL Persistence
+## PostgreSQL Persistence
 
 The database uses a named Docker volume:
 
+```text
 postgres-data
+```
 
-The volume allows PostgreSQL data to survive container recreation.
+That volume allows database data to survive container recreation.
+
+```mermaid
 flowchart TB
     CONTAINER[PostgreSQL Container]
-
-    CONTAINER --> VOLUME[(postgres-data)]
-
-    VOLUME --> DATA[(Database Data)]
-
+    VOLUME[(postgres-data)]
+    DATA[(Database Data)]
     REMOVE[Container Removed]
+    PERSIST[Data Remains]
+
+    CONTAINER --> VOLUME
+    VOLUME --> DATA
     REMOVE -.-> CONTAINER
+    DATA --> PERSIST
+```
 
-    DATA --> PERSIST[Data Remains]
+### Stop PostgreSQL
 
-    Therefore:
-    docker compose \
-  -f .devcontainer/compose.yaml \
-  down
-  does not delete the database volume.
-  ▶️ Start PostgreSQL Again
-
-If the container has been stopped:
-
-docker compose \
-  -f .devcontainer/compose.yaml \
-  start
-
-Check:
-
-docker compose \
-  -f .devcontainer/compose.yaml \
-  ps
-⏹️ Stop PostgreSQL
-
-To stop the database:
-
+```bash
 docker compose \
   -f .devcontainer/compose.yaml \
   stop
+```
 
 The database data remains intact.
 
-🗑️ Remove PostgreSQL Containers
+### Start PostgreSQL Again
 
-To remove the PostgreSQL container and network:
+```bash
+docker compose \
+  -f .devcontainer/compose.yaml \
+  start
+```
 
+### Remove Containers and Network
+
+```bash
 docker compose \
   -f .devcontainer/compose.yaml \
   down
+```
 
-The named database volume remains.
+This removes the PostgreSQL container and network. The named database volume remains.
 
-⚠️ Completely Reset PostgreSQL
+### Completely Reset PostgreSQL
 
-If you want to delete the PostgreSQL container and all local database data:
-
+```bash
 docker compose \
   -f .devcontainer/compose.yaml \
   down -v
+```
 
-⚠️ Warning: This deletes the postgres-data volume and all local PostgreSQL data.
+Warning: this deletes the `postgres-data` volume and all local PostgreSQL data.
 
-The next time you run:
+The next time PostgreSQL starts, Docker will initialize a fresh database.
 
-docker compose \
-  -f .devcontainer/compose.yaml \
-  up -d
+## Build the Development Image Manually
 
-PostgreSQL will initialize a completely new database.
-
-🐳 Build the Development Image
-
-The development image can currently be built independently from the Dev Container.
+The development image can also be built independently from VS Code.
 
 From the repository root:
 
+```bash
 docker build \
   -f .devcontainer/Dockerfile.dev \
   -t spring-boot-devcontainer:dev \
   .
-🔍 Verify the Development Image
+```
 
-Run:
+## Verify the Development Image Manually
 
+```bash
 docker run --rm spring-boot-devcontainer:dev bash -lc '
 echo "===== JAVA ====="
 java --version
@@ -454,118 +499,99 @@ echo "===== DOCKER ====="
 docker --version
 docker compose version
 '
+```
 
-This verifies that the development image contains the expected tooling.
+This verifies that the image contains the expected tooling.
 
-🧪 Current Verified Environment
+## Current Verified Environment
 
-The development image has been successfully verified with:
+The development image has been verified with the following major tools:
 
-Java             21.0.12 LTS
-Maven            3.9.11
-Gradle           9.1.0
-Git              2.55.0
-GitHub CLI       2.97.0
-Azure CLI        2.89.1
-Python           3.11.2
-Docker           29.7.2
-Docker Compose   5.4.0
+| Tool | Version |
+| --- | --- |
+| Java | 21.0.12 LTS |
+| Maven | 3.9.11 |
+| Gradle | 9.1.0 |
+| Git | 2.55.0 |
+| GitHub CLI | 2.97.0 |
+| Azure CLI | 2.89.1 |
+| Python | 3.11.2 |
+| Docker | 29.7.2 |
+| Docker Compose | 5.4.0 |
 
-The exact patch versions may change as the project evolves.
+Exact patch versions may change as package repositories evolve.
 
-🔄 Development Environment Flow
+## Why Dev Containers?
 
-The intended developer experience is:
-sequenceDiagram
-    actor Developer
-    participant GitHub
-    participant DevContainer as Dev Container
-    participant PostgreSQL
+Without Dev Containers, each participant may need to manually install and configure:
 
-    Developer->>GitHub: Clone repository
-    GitHub-->>Developer: Repository
-
-    Developer->>DevContainer: Open in Dev Container
-
-    DevContainer->>DevContainer: Build development environment
-    DevContainer->>DevContainer: Install Java + tools
-
-    DevContainer->>PostgreSQL: Start / connect
-    PostgreSQL-->>DevContainer: Healthy
-
-    Developer->>DevContainer: Build Spring Boot application
-    DevContainer->>PostgreSQL: Database connection
-    PostgreSQL-->>DevContainer: Query results
-
-    Developer->>DevContainer: Run tests
-    DevContainer-->>Developer: Test results
-    🧱 Separation of Responsibilities
-
-The architecture follows a simple rule:
-flowchart TB
-    REPO[Repository]
-
-    REPO --> ENV[Environment]
-    REPO --> INFRA[Infrastructure]
-    REPO --> WORKSPACE[Workspace]
-
-    ENV --> DF[Dockerfile.dev]
-    DF --> TOOLS[Java + Maven + Gradle + CLI Tools]
-
-    INFRA --> CY[compose.yaml]
-    CY --> SERVICES[PostgreSQL + Other Local Services]
-
-    WORKSPACE --> DC[devcontainer.json]
-    DC --> CONFIG[VS Code / Dev Container Configuration]
-    Environment
-
-Dockerfile.dev
-
-What tools does the developer have?
-
-Infrastructure
-
-compose.yaml
-
-What services does the application depend on?
-
-Workspace
-
-devcontainer.json
-
-How does the developer enter and work inside the environment?
-
-🌍 Why Dev Containers?
-
-Without Dev Containers, a typical Java project might require:
-
+```text
 Developer Machine
-│
-├── Install Java
-├── Configure JAVA_HOME
-├── Install Maven
-├── Install Gradle
-├── Install Git
-├── Install Docker
-├── Install PostgreSQL
-├── Configure PostgreSQL
-├── Configure credentials
-├── Configure environment variables
-└── Hope everything matches the team
+|
++-- Java
++-- JAVA_HOME
++-- Maven
++-- Gradle
++-- Git
++-- Docker
++-- PostgreSQL
++-- Database credentials
++-- Environment variables
++-- Editor extensions
+```
 
-With Dev Containers:
+With Dev Containers, the project describes the development environment:
 
+```mermaid
 flowchart LR
     DEV[Developer]
+    REPO[Clone Repository]
+    DC[Open in Dev Container]
+    ENV[Reproducible Environment]
+    JAVA[Java 21]
+    BUILD[Maven and Gradle]
+    TOOLS[Development Tools]
+    DB[(PostgreSQL)]
 
-    DEV --> REPO[Clone Repository]
+    DEV --> REPO
+    REPO --> DC
+    DC --> ENV
+    ENV --> JAVA
+    ENV --> BUILD
+    ENV --> TOOLS
+    ENV --> DB
+```
 
-    REPO --> DC[Open in Dev Container]
+## Learning Path
 
-    DC --> ENV[Reproducible Environment]
+Work through the repository in this order:
 
-    ENV --> JAVA[Java 21]
-    ENV --> BUILD[Maven / Gradle]
-    ENV --> TOOLS[Development Tools]
-    ENV --> DB[(PostgreSQL)]
-    
+1. Review the repository structure.
+2. Open the project in a Dev Container.
+3. Run `verify.sh` to inspect the installed tools.
+4. Start PostgreSQL with Docker Compose.
+5. Inspect the database using `psql`.
+6. Generate or add a Spring Boot application.
+7. Configure Spring Boot to connect to PostgreSQL.
+8. Run the application inside the Dev Container.
+9. Run tests against local infrastructure.
+
+## Key Lesson
+
+The main idea is simple:
+
+```mermaid
+flowchart TB
+    CODE[Application Code]
+    ENV[Development Environment]
+    INFRA[Local Infrastructure]
+    REPO[Repository]
+
+    CODE --> REPO
+    ENV --> REPO
+    INFRA --> REPO
+
+    REPO --> REPRO[Reproducible Developer Experience]
+```
+
+When the environment is part of the repository, developers spend less time setting up tools and more time building Java applications.

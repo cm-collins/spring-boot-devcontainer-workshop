@@ -6,6 +6,15 @@
     },
     "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
     "remoteUser": "vscode",
+    "mounts": [
+        "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+    ],
+    "runArgs": [
+        "--group-add=keep-groups"
+    ],
+    "remoteEnv": {
+        "DOCKER_HOST": "unix:///var/run/docker.sock"
+    },
     "forwardPorts": [
         8080,
         5432
