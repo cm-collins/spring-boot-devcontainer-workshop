@@ -13,7 +13,15 @@
         "--group-add=keep-groups"
     ],
     "remoteEnv": {
-        "DOCKER_HOST": "unix:///var/run/docker.sock"
+        "DOCKER_HOST": "unix:///var/run/docker.sock",
+        "POSTGRES_HOST": "postgres",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DB": "spring_boot_dev",
+        "POSTGRES_USER": "spring_boot",
+        "POSTGRES_PASSWORD": "spring_boot_dev_password",
+        "SPRING_DATASOURCE_URL": "jdbc:postgresql://postgres:5432/spring_boot_dev",
+        "SPRING_DATASOURCE_USERNAME": "spring_boot",
+        "SPRING_DATASOURCE_PASSWORD": "spring_boot_dev_password"
     },
     "forwardPorts": [
         8080,
@@ -54,5 +62,6 @@
         }
     },
     "postCreateCommand": "bash .devcontainer/scripts/post-create.sh",
-    "postStartCommand": "bash .devcontainer/scripts/post-start.sh"
+    "postStartCommand": "bash .devcontainer/scripts/start-postgres.sh",
+    "postAttachCommand": "bash .devcontainer/scripts/show-devcontainer-summary.sh"
 }

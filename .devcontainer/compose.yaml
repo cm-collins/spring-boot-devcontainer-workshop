@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:18
+    container_name: spring-dev-postgres
 
     environment:
       POSTGRES_DB: spring_boot_dev
@@ -11,7 +12,7 @@ services:
       - "5432:5432"
 
     volumes:
-      - postgres-data:/var/lib/postgresql
+      - spring-dev-postgres-data:/var/lib/postgresql/data
 
     healthcheck:
       test:
@@ -31,9 +32,11 @@ services:
 
 
 volumes:
-  postgres-data:
+  spring-dev-postgres-data:
+    name: spring-dev-postgres-data
 
 
 networks:
   spring-dev-network:
+    name: spring-dev-network
     driver: bridge

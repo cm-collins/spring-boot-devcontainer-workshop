@@ -4,7 +4,7 @@ set -euo pipefail
 
 echo
 echo "========================================"
-echo " Spring Boot Dev Container Verification"
+echo " Development environment verification"
 echo "========================================"
 
 check_command() {
@@ -12,18 +12,19 @@ check_command() {
     local command="$2"
 
     if command -v "$command" >/dev/null 2>&1; then
-        echo "✓ $name"
+        printf '[ok]      %s\n' "$name"
     else
-        echo "✗ $name"
+        printf '[missing] %s\n' "$name"
         return 1
     fi
 }
 
 echo
-echo "Development Tools"
-echo "------------------"
+echo "Required tools"
+echo "--------------"
 
 check_command "Java" "java"
+check_command "Java compiler" "javac"
 check_command "Maven" "mvn"
 check_command "Gradle" "gradle"
 check_command "Git" "git"
@@ -33,52 +34,42 @@ check_command "Python" "python3"
 check_command "Docker" "docker"
 
 if docker compose version >/dev/null 2>&1; then
-    echo "✓ Docker Compose"
+    printf '[ok]      %s\n' "Docker Compose"
 else
-    echo "✗ Docker Compose"
+    printf '[missing] %s\n' "Docker Compose"
     exit 1
 fi
 
 echo
-echo "Versions"
-echo "--------"
+echo "Installed versions"
+echo "------------------"
 
-echo "Java:"
+printf 'Java:           '
 java --version 2>&1 | head -n 1
 
-echo
-echo "Maven:"
-mvn --version | head -n 2
+printf 'Maven:          '
+mvn --version | head -n 1
 
-echo
-echo "Gradle:"
+printf 'Gradle:         '
 gradle --version | grep '^Gradle'
 
-echo
-echo "Git:"
+printf 'Git:            '
 git --version
 
-echo
-echo "GitHub CLI:"
+printf 'GitHub CLI:     '
 gh --version | head -n 1
 
-echo
-echo "Azure CLI:"
+printf 'Azure CLI:      '
 az version --output tsv --query '"azure-cli"' 2>/dev/null || az version
 
-echo
-echo "Python:"
+printf 'Python:         '
 python3 --version
 
-echo
-echo "Docker:"
+printf 'Docker:         '
 docker --version
 
-echo
-echo "Docker Compose:"
+printf 'Docker Compose: '
 docker compose version
 
 echo
-echo "========================================"
-echo " ✓ Environment verification complete"
-echo "========================================"
+echo "Environment verification complete."

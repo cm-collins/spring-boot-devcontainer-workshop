@@ -3,41 +3,20 @@
 set -euo pipefail
 
 echo "========================================"
-echo " Starting local development services"
+echo " Dev Container post-create setup"
 echo "========================================"
 
-COMPOSE_FILE=".devcontainer/compose.yaml"
-
-if [ ! -f "$COMPOSE_FILE" ]; then
-    echo "ERROR: $COMPOSE_FILE was not found."
-    exit 1
-fi
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo
-echo "Starting PostgreSQL..."
-
-docker compose \
-    -f "$COMPOSE_FILE" \
-    up -d
+echo "Verifying the development environment..."
+bash "$SCRIPT_DIR/verify-environment.sh"
 
 echo
-echo "Waiting for PostgreSQL to become healthy..."
-
-until docker compose \
-    -f "$COMPOSE_FILE" \
-    exec -T postgres \
-    pg_isready \
-    -U spring_boot \
-    -d spring_boot_dev \
-    >/dev/null 2>&1
-do
-    sleep 2
-done
-
-echo
-echo "✓ PostgreSQL is ready."
+echo "Starting local development services..."
+bash "$SCRIPT_DIR/start-postgres.sh"
 
 echo
 echo "========================================"
-echo " Local development services are ready"
+echo " Dev Container setup complete"
 echo "========================================"

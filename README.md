@@ -101,8 +101,9 @@ spring-boot-devcontainer-workshop/
 |   |
 |   +-- scripts/
 |       +-- post-create.sh
-|       +-- post-start.sh
-|       +-- verify.sh
+|       +-- show-devcontainer-summary.sh
+|       +-- start-postgres.sh
+|       +-- verify-environment.sh
 |
 +-- README.md
 +-- LICENSE
@@ -160,18 +161,21 @@ It configures:
 | `workspaceFolder` | Opens the project under `/workspaces/...`. |
 | `remoteUser` | Uses the standard `vscode` container user. |
 | `mounts` | Mounts the host Docker socket for Docker CLI access. |
+| `remoteEnv` | Provides PostgreSQL and Spring datasource environment variables. |
 | `forwardPorts` | Forwards Spring Boot and PostgreSQL ports. |
 | `customizations.vscode.extensions` | Installs Java, Spring Boot, Gradle, YAML, and Docker extensions. |
-| `postCreateCommand` | Runs setup after the container is created. |
-| `postStartCommand` | Runs a short status script when the container starts. |
+| `postCreateCommand` | Verifies the environment and starts PostgreSQL after the container is created. |
+| `postStartCommand` | Runs `start-postgres.sh` whenever the container starts. |
+| `postAttachCommand` | Prints a learner-friendly summary after VS Code attaches to the container. |
 
 ### `.devcontainer/scripts/`
 
 | Script | Purpose |
 | --- | --- |
-| `post-create.sh` | Starts PostgreSQL with Docker Compose and waits until it is ready. |
-| `post-start.sh` | Prints basic container, Java, and workspace information. |
-| `verify.sh` | Verifies that required tools are installed and prints their versions. |
+| `post-create.sh` | Dev Container lifecycle hook that verifies the environment and starts services after creation. |
+| `show-devcontainer-summary.sh` | Prints the workspace, tool versions, database connection details, and useful commands. |
+| `start-postgres.sh` | Starts PostgreSQL, waits for readiness, and attaches the Dev Container to the PostgreSQL network. |
+| `verify-environment.sh` | Verifies that required tools are installed and prints their versions. |
 
 ## Development Environment Flow
 
@@ -206,7 +210,7 @@ flowchart LR
     NETWORK{{spring-dev-network}}
     POSTGRES[(PostgreSQL 18)]
     DB[(spring_boot_dev)]
-    VOLUME[(postgres-data)]
+    VOLUME[(spring-dev-postgres-data)]
 
     DEV --> DOCKER
     DOCKER --> COMPOSE
@@ -226,7 +230,7 @@ flowchart LR
 | Host port | `5432` |
 | PostgreSQL version | `18` |
 | Docker network | `spring-dev-network` |
-| Docker volume | `postgres-data` |
+| Docker volume | `spring-dev-postgres-data` |
 
 From the host machine, connect through:
 
@@ -257,7 +261,7 @@ flowchart LR
     APP -. "postgres:5432" .-> DB
 ```
 
-Note: the current Dev Container starts PostgreSQL by using the mounted host Docker socket. If you want the Dev Container itself to resolve `postgres` directly, make sure the Dev Container is attached to the same Docker network as PostgreSQL, or convert the setup to a Compose-based Dev Container.
+The Dev Container starts PostgreSQL by using the mounted host Docker socket. The `start-postgres.sh` script also attaches the Dev Container to `spring-dev-network`, so `postgres:5432` works from inside the Dev Container.
 
 ## Getting Started
 
@@ -292,7 +296,7 @@ VS Code will build the development image from `.devcontainer/Dockerfile.dev`.
 Inside the Dev Container terminal, run:
 
 ```bash
-bash .devcontainer/scripts/verify.sh
+bash .devcontainer/scripts/verify-environment.sh
 ```
 
 This checks Java, Maven, Gradle, Git, GitHub CLI, Azure CLI, Python, Docker, and Docker Compose.
@@ -397,7 +401,7 @@ SELECT current_database();
 The database uses a named Docker volume:
 
 ```text
-postgres-data
+spring-dev-postgres-data
 ```
 
 That volume allows database data to survive container recreation.
@@ -405,7 +409,7 @@ That volume allows database data to survive container recreation.
 ```mermaid
 flowchart TB
     CONTAINER[PostgreSQL Container]
-    VOLUME[(postgres-data)]
+    VOLUME[(spring-dev-postgres-data)]
     DATA[(Database Data)]
     REMOVE[Container Removed]
     PERSIST[Data Remains]
@@ -452,7 +456,7 @@ docker compose \
   down -v
 ```
 
-Warning: this deletes the `postgres-data` volume and all local PostgreSQL data.
+Warning: this deletes the `spring-dev-postgres-data` volume and all local PostgreSQL data.
 
 The next time PostgreSQL starts, Docker will initialize a fresh database.
 
@@ -568,7 +572,7 @@ Work through the repository in this order:
 
 1. Review the repository structure.
 2. Open the project in a Dev Container.
-3. Run `verify.sh` to inspect the installed tools.
+3. Run `verify-environment.sh` to inspect the installed tools.
 4. Start PostgreSQL with Docker Compose.
 5. Inspect the database using `psql`.
 6. Generate or add a Spring Boot application.
