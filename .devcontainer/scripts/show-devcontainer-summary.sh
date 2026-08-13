@@ -10,8 +10,15 @@ POSTGRES_USER="${POSTGRES_USER:-spring_boot}"
 POSTGRES_HOST="${POSTGRES_HOST:-postgres}"
 POSTGRES_PORT="${POSTGRES_PORT:-5432}"
 
+DOCKER_CMD=(docker)
+if ! docker info >/dev/null 2>&1; then
+    if command -v sudo >/dev/null 2>&1 && sudo docker info >/dev/null 2>&1; then
+        DOCKER_CMD=(sudo docker)
+    fi
+fi
+
 postgres_status="not running"
-if docker compose -f "$COMPOSE_FILE" exec -T postgres \
+if "${DOCKER_CMD[@]}" compose -f "$COMPOSE_FILE" exec -T postgres \
     pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null 2>&1; then
     postgres_status="ready"
 fi
